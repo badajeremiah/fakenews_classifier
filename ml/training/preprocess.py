@@ -109,7 +109,7 @@ def fit_tfidf(df):
 
 
 # ── 5. Tokenize, Pad and Save Arrays ──────────────────
-def tokenize_and_save(df, w2v_model):
+def tokenize_and_save(df, w2v_model, tfidf):
     print("[5/5] Tokenizing and padding sequences...")
     tokenizer = Tokenizer()
     tokenizer.fit_on_texts(df['cleaned'])
@@ -130,6 +130,10 @@ def tokenize_and_save(df, w2v_model):
     np.save(os.path.join(config.DATASET_PROCESSED, 'y_labels.npy'), labels)
     joblib.dump(tokenizer, os.path.join(
         config.VECTORIZERS_DIR, 'tokenizer.pkl'))
+    from scipy.sparse import save_npz
+    X_tfidf_sparse = tfidf.transform(df['cleaned'])
+    save_npz(os.path.join(config.DATASET_PROCESSED, 'X_tfidf.npz'), X_tfidf_sparse)
+    print(f"      TF-IDF matrix shape: {X_tfidf_sparse.shape}")
 
     print(f"      Sequence shape: {X_seq.shape}")
     print(f"      Labels shape: {labels.shape}")
@@ -146,8 +150,8 @@ if __name__ == "__main__":
     df = load_dataset()
     df = preprocess_texts(df)
     w2v_model = train_word2vec(df)
-    fit_tfidf(df)
-    tokenize_and_save(df, w2v_model)
+    tfidf = fit_tfidf(df)
+    tokenize_and_save(df, w2v_model, tfidf)
 
     print("=" * 55)
     print(" Preprocessing complete. All artifacts saved.")

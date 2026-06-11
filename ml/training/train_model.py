@@ -39,14 +39,12 @@ def load_data():
         config.DATASET_PROCESSED, 'X_sequences.npy'))
     y = np.load(os.path.join(
         config.DATASET_PROCESSED, 'y_labels.npy'))
-    tfidf = joblib.load(os.path.join(
-        config.VECTORIZERS_DIR, 'tfidf_vectorizer.pkl'))
     tokenizer = joblib.load(os.path.join(
         config.VECTORIZERS_DIR, 'tokenizer.pkl'))
 
     print(f"      Sequences: {X_seq.shape}")
     print(f"      Labels: {y.shape}")
-    return X_seq, y, tfidf, tokenizer
+    return X_seq, y, tokenizer
 
 
 # ── 2. Build Embedding Matrix ──────────────────────────
@@ -123,15 +121,12 @@ def build_model(vocab_size, embedding_matrix):
 
 
 # ── 4. Prepare TF-IDF Features ─────────────────────────
-def prepare_tfidf_features(X_seq, tfidf, tokenizer):
-    print("[4/6] Preparing TF-IDF features...")
-    # Reconstruct cleaned texts from sequences for TF-IDF
-    reverse_index = {v: k for k, v in tokenizer.word_index.items()}
-    texts = []
-    for seq in X_seq:
-        words = [reverse_index.get(idx, '') for idx in seq if idx != 0]
-        texts.append(' '.join(words))
-    X_tfidf = tfidf.transform(texts).toarray().astype(np.float32)
+def prepare_tfidf_features():
+    print("[4/6] Loading TF-IDF features...")
+    from scipy.sparse import load_npz
+    X_tfidf = load_npz(os.path.join(
+        config.DATASET_PROCESSED, 'X_tfidf.npz'))
+    X_tfidf = X_tfidf.toarray().astype(np.float32)
     print(f"      TF-IDF shape: {X_tfidf.shape}")
     return X_tfidf
 
@@ -250,10 +245,10 @@ if __name__ == "__main__":
     print(" Fake News Detector — Model Training")
     print("=" * 55)
 
-    X_seq, y, tfidf, tokenizer = load_data()
+    X_seq, y, tokenizer = load_data()
     embedding_matrix, vocab_size = build_embedding_matrix(tokenizer)
     model = build_model(vocab_size, embedding_matrix)
-    X_tfidf = prepare_tfidf_features(X_seq, tfidf, tokenizer)
+    X_tfidf = prepare_tfidf_features()
     history, X_seq_test, X_tfidf_test, y_test = train_model(
         model, X_seq, X_tfidf, y)
     evaluate_model(model, X_seq_test, X_tfidf_test, y_test, history)
